@@ -2,12 +2,12 @@
 trigger:
   branches:
     include:
-      - main
+      - dev
 
 pr:
   branches:
     include:
-      - main
+      - dev
 
 pool:
   vmImage: ubuntu-latest
