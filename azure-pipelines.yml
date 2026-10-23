@@ -50,9 +50,19 @@ stages:
                    ".pytest_cache/*" "*/.pytest_cache/*"
             displayName: Package application
 
-          - publish: $(Build.ArtifactStagingDirectory)/app.zip
-            artifact: python-app
-            displayName: Publish build artifact
+          - task: UniversalPackages@0
+            displayName: 'Publish ZIP to Azure Artifacts'
+              inputs:
+                command: publish
+                publishDirectory: '$(Build.ArtifactStagingDirectory)'
+                vstsFeedPublish: 'firstproject/azurelearning-feeed'
+                vstsFeedPackagePublish: 'azurelearning-app'
+                versionOption: patch
+                packagePublishDescription: 'Python application build artifact'
+
+          # - publish: $(Build.ArtifactStagingDirectory)/app.zip
+          #   artifact: python-app
+          #   displayName: Publish build artifact
 
   - stage: Deploy
     displayName: Deploy to Azure
