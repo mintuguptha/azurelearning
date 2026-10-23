@@ -1,0 +1,80 @@
+
+trigger:
+  branches:
+    include:
+      - dev
+
+pr:
+  branches:
+    include:
+      - dev
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  pythonVersion: '3.12'
+  azureServiceConnection: 'Azure-Service-Connection'
+  webAppName: 'vamshi'
+
+stages:
+  - stage: Build
+    displayName: Build and Test
+    jobs:
+      - job: BuildAndTest
+        steps:
+          - task: UsePythonVersion@0
+            displayName: Set up Python
+            inputs:
+              versionSpec: '$(pythonVersion)'
+
+          - script: |
+              python -m pip install --upgrade pip
+              pip install pytest
+              if [ -f requirements.txt ]; then
+                pip install -r requirements.txt
+              fi
+            displayName: Install dependencies
+
+          - script: |
+              python -m compileall -q .
+              python -m pytest
+            displayName: Run tests
+
+          - bash: |
+              mkdir -p "$(Build.ArtifactStagingDirectory)/package"
+              zip -r "$(Build.ArtifactStagingDirectory)/app.zip" . \
+                -x ".git/*" "*/.git/*" \
+                   ".venv/*" "*/.venv/*" \
+                   "__pycache__/*" "*/__pycache__/*" \
+                   ".pytest_cache/*" "*/.pytest_cache/*"
+            displayName: Package application
+
+          - publish: $(Build.ArtifactStagingDirectory)/app.zip
+            artifact: python-app
+            displayName: Publish build artifact
+
+  - stage: Deploy
+    displayName: Deploy to Azure
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - deployment: DeployWebApp
+        displayName: Deploy Python Web App
+        environment: production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: python-app
+
+                - task: AzureWebApp@1
+                  displayName: Deploy to Azure App Service
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    appType: webAppLinux
+                    appName: '$(webAppName)'
+                    package: '$(Pipeline.Workspace)/python-app/app.zip'
+                    deploymentMethod: zipDeploy
+                    appSettings: '-SCM_DO_BUILD_DURING_DEPLOYMENT true'
