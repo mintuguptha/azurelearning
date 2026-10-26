@@ -12,7 +12,7 @@ class AppTests(unittest.TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Your Vamshi Flask app is running", response.data)
+        self.assertIn(b"Your Krishna Flask app is running", response.data)
 
     def test_health_check(self):
         response = self.client.get("/health")
