@@ -43,11 +43,13 @@ stages:
 
     - bash: |
         mkdir -p "$(Build.ArtifactStagingDirectory)/package"
-        zip -r "$(Build.ArtifactStagingDirectory)/app.zip" . \
-          -x ".git/*" "*/.git/*" \
-          ".venv/*" "*/.venv/*" \
-          "__pycache__/*" "*/__pycache__/*" \
-          ".pytest_cache/*" "*/.pytest_cache/*"
+        shopt -s dotglob
+        for item in *; do
+          if [ "$item" != ".git" ] && [ "$item" != ".venv" ] && [ "$item" != "__pycache__" ] && [ "$item" != ".pytest_cache" ]; then
+            cp -R "$item" "$(Build.ArtifactStagingDirectory)/package/"
+          fi
+        done
+        zip -r "$(Build.ArtifactStagingDirectory)/app.zip" "$(Build.ArtifactStagingDirectory)/package"
       displayName: Package application
 
     - publish: '$(Build.ArtifactStagingDirectory)/app.zip'
@@ -55,10 +57,10 @@ stages:
       displayName: Publish pipeline artifact
 
     - task: UniversalPackages@0
-      displayName: Publish ZIP to Azure Artifacts
+      displayName: Publish app package to Azure Artifacts
       inputs:
         command: publish
-        publishDirectory: '$(Build.ArtifactStagingDirectory)'
+        publishDirectory: '$(Build.ArtifactStagingDirectory)/package'
         vstsFeedPublish: 'firstproject/azurelearning-feeed'
         vstsFeedPackagePublish: 'azurelearning-app'
         versionOption: patch
